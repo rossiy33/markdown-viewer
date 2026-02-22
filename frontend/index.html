@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Viewer</title>
+    <!-- marked.js: Markdown→HTMLパーサー -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- highlight.js: シンタックスハイライト（ライト/ダーク両対応） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        /* テーマ変数: ライトモード（デフォルト） */
+        :root {
+            --color-bg: #ffffff;
+            --color-text: #24292f;
+            --color-toolbar-bg: #f6f8fa;
+            --color-border: #d0d7de;
+            --color-btn-bg: #ffffff;
+            --color-btn-hover: #f3f4f6;
+            --color-btn-active: #ebecf0;
+            --color-btn-border-hover: #b1bac4;
+            --color-file-name: #57606a;
+            --color-welcome: #8b949e;
+            --color-hint: #b1bac4;
+            --color-link: #0969da;
+            --color-code-bg: #f6f8fa;
+            --color-blockquote-text: #57606a;
+            --color-table-header-bg: #f6f8fa;
+            --color-drop-bg: rgba(9, 105, 218, 0.08);
+            --color-drop-border: #0969da;
+            --color-drop-label-bg: #ffffff;
+            --color-drop-shadow: rgba(0, 0, 0, 0.1);
+            --color-error-bg: #cf222e;
+            --color-error-shadow: rgba(0, 0, 0, 0.15);
+            --color-scrollbar-thumb: #c1c1c1;
+            --color-scrollbar-track: #f1f1f1;
+        }
+
+        /* テーマ変数: ダークモード */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-bg: #0d1117;
+                --color-text: #e6edf3;
+                --color-toolbar-bg: #161b22;
+                --color-border: #30363d;
+                --color-btn-bg: #21262d;
+                --color-btn-hover: #30363d;
+                --color-btn-active: #3a424b;
+                --color-btn-border-hover: #484f58;
+                --color-file-name: #8b949e;
+                --color-welcome: #8b949e;
+                --color-hint: #484f58;
+                --color-link: #58a6ff;
+                --color-code-bg: #161b22;
+                --color-blockquote-text: #8b949e;
+                --color-table-header-bg: #161b22;
+                --color-drop-bg: rgba(88, 166, 255, 0.08);
+                --color-drop-border: #58a6ff;
+                --color-drop-label-bg: #161b22;
+                --color-drop-shadow: rgba(0, 0, 0, 0.4);
+                --color-error-bg: #da3633;
+                --color-error-shadow: rgba(0, 0, 0, 0.4);
+                --color-scrollbar-thumb: #484f58;
+                --color-scrollbar-track: #0d1117;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", Roboto, Helvetica, Arial, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* スクロールバー */
+        .content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .content::-webkit-scrollbar-track {
+            background: var(--color-scrollbar-track);
+        }
+        .content::-webkit-scrollbar-thumb {
+            background: var(--color-scrollbar-thumb);
+            border-radius: 4px;
+        }
+
+        /* ツールバー */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: var(--color-toolbar-bg);
+            border-bottom: 1px solid var(--color-border);
+            min-height: 48px;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .toolbar button {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: var(--color-btn-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--color-text);
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .toolbar button:hover {
+            background: var(--color-btn-hover);
+            border-color: var(--color-btn-border-hover);
+        }
+
+        .toolbar button:active {
+            background: var(--color-btn-active);
+        }
+
+        .toolbar .file-name {
+            font-size: 13px;
+            color: var(--color-file-name);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        /* メインコンテンツ */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px 48px;
+        }
+
+        /* 初期画面（ファイル未読み込み時） */
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--color-welcome);
+            gap: 16px;
+        }
+
+        .welcome svg {
+            width: 64px;
+            height: 64px;
+            opacity: 0.4;
+        }
+
+        .welcome p {
+            font-size: 16px;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .welcome .hint {
+            font-size: 13px;
+            color: var(--color-hint);
+        }
+
+        /* Markdown表示エリア */
+        .markdown-body {
+            max-width: 860px;
+            margin: 0 auto;
+            line-height: 1.8;
+            display: none;
+        }
+
+        .markdown-body h1 {
+            font-size: 2em;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.3em;
+            margin: 0.67em 0;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.5em;
+            border-bottom: 1px solid var(--color-border);
+            padding-bottom: 0.3em;
+            margin: 1em 0 0.5em;
+        }
+
+        .markdown-body h3 { font-size: 1.25em; margin: 1em 0 0.5em; }
+        .markdown-body h4 { font-size: 1em; margin: 1em 0 0.5em; }
+
+        .markdown-body p {
+            margin: 0 0 16px;
+        }
+
+        .markdown-body a {
+            color: var(--color-link);
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+
+        .markdown-body code {
+            background: var(--color-code-bg);
+            padding: 0.2em 0.4em;
+            border-radius: 6px;
+            font-size: 85%;
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        }
+
+        .markdown-body pre {
+            background: var(--color-code-bg);
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            margin: 0 0 16px;
+        }
+
+        .markdown-body pre code {
+            background: none;
+            padding: 0;
+            font-size: 85%;
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid var(--color-border);
+            padding: 0 16px;
+            color: var(--color-blockquote-text);
+            margin: 0 0 16px;
+        }
+
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 2em;
+            margin: 0 0 16px;
+        }
+
+        .markdown-body li {
+            margin: 4px 0;
+        }
+
+        .markdown-body table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0 0 16px;
+        }
+
+        .markdown-body th, .markdown-body td {
+            border: 1px solid var(--color-border);
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        .markdown-body th {
+            background: var(--color-table-header-bg);
+            font-weight: 600;
+        }
+
+        .markdown-body img {
+            max-width: 100%;
+            border-radius: 6px;
+        }
+
+        .markdown-body hr {
+            border: none;
+            border-top: 2px solid var(--color-border);
+            margin: 24px 0;
+        }
+
+        .markdown-body input[type="checkbox"] {
+            margin-right: 6px;
+        }
+
+        /* ドラッグオーバー時のオーバーレイ */
+        .drop-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--color-drop-bg);
+            border: 3px dashed var(--color-drop-border);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .drop-overlay.active {
+            display: flex;
+        }
+
+        .drop-overlay span {
+            font-size: 18px;
+            color: var(--color-drop-border);
+            font-weight: 600;
+            background: var(--color-drop-label-bg);
+            padding: 12px 24px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--color-drop-shadow);
+        }
+
+        /* エラーメッセージ */
+        .error-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--color-error-bg);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 4px 12px var(--color-error-shadow);
+        }
+
+        .error-toast.show {
+            display: block;
+            animation: fadeInOut 3s ease forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+            10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body style="--wails-drop-target: drop">
+    <div class="toolbar" style="--wails-draggable: drag">
+        <button id="openBtn" style="--wails-draggable: no-drag">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3.879a1.5 1.5 0 0 1 1.06.44l1.122 1.12A1.5 1.5 0 0 0 9.62 4H13.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/>
+            </svg>
+            ファイルを開く
+        </button>
+        <span class="file-name" id="fileName"></span>
+    </div>
+
+    <div class="content" id="contentArea">
+        <div class="welcome" id="welcome">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+            </svg>
+            <p>Markdownファイルをここにドラッグ＆ドロップ<br>
+               または「ファイルを開く」ボタンで選択</p>
+            <p class="hint">対応形式: .md, .markdown, .txt</p>
+        </div>
+        <div class="markdown-body" id="markdownBody"></div>
+    </div>
+
+    <div class="drop-overlay" id="dropOverlay">
+        <span>ここにドロップしてファイルを開く</span>
+    </div>
+
+    <div class="error-toast" id="errorToast"></div>
+
+    <script>
+        // marked.jsの設定
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    return hljs.highlight(code, { language: lang }).value;
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true,
+        });
+
+        const openBtn = document.getElementById('openBtn');
+        const fileName = document.getElementById('fileName');
+        const welcome = document.getElementById('welcome');
+        const markdownBody = document.getElementById('markdownBody');
+        const contentArea = document.getElementById('contentArea');
+        const dropOverlay = document.getElementById('dropOverlay');
+        const errorToast = document.getElementById('errorToast');
+
+        // Markdownを表示する
+        function renderMarkdown(path, content) {
+            fileName.textContent = path;
+            fileName.title = path;
+            welcome.style.display = 'none';
+            markdownBody.style.display = 'block';
+            markdownBody.innerHTML = marked.parse(content);
+            contentArea.scrollTop = 0;
+        }
+
+        // エラーメッセージを表示する
+        function showError(message) {
+            errorToast.textContent = message;
+            errorToast.classList.remove('show');
+            void errorToast.offsetWidth;
+            errorToast.classList.add('show');
+            setTimeout(() => errorToast.classList.remove('show'), 3000);
+        }
+
+        // ファイルを開くボタン
+        openBtn.addEventListener('click', async () => {
+            try {
+                const result = await window.go.main.App.OpenFileDialog();
+                if (result) {
+                    renderMarkdown(result.path, result.content);
+                }
+            } catch (err) {
+                showError('ファイルを開けませんでした: ' + err);
+            }
+        });
+
+        // Welcome画面ダブルクリックでファイルを開く
+        contentArea.addEventListener('dblclick', async (e) => {
+            if (markdownBody.style.display === 'block' && markdownBody.contains(e.target)) {
+                return;
+            }
+            try {
+                const result = await window.go.main.App.OpenFileDialog();
+                if (result) {
+                    renderMarkdown(result.path, result.content);
+                }
+            } catch (err) {
+                showError('ファイルを開けませんでした: ' + err);
+            }
+        });
+
+        // ★ Wails v2 ドラッグ＆ドロップ
+        // JS側 OnFileDrop でGoのReadMarkdownFileを直接呼ぶ（最も確実な方式）
+        // useDropTarget=false でウィンドウ全体をドロップターゲットにする
+        window.runtime.OnFileDrop(async function(x, y, paths) {
+            dropOverlay.classList.remove('active');
+            if (!paths || paths.length === 0) return;
+
+            for (const path of paths) {
+                const ext = path.split('.').pop().toLowerCase();
+                if (ext === 'md' || ext === 'markdown' || ext === 'txt') {
+                    try {
+                        const result = await window.go.main.App.ReadMarkdownFile(path);
+                        if (result) {
+                            renderMarkdown(result.path, result.content);
+                        }
+                    } catch (err) {
+                        showError('ファイルを開けませんでした: ' + err);
+                    }
+                    return;
+                }
+            }
+            showError('Markdownファイル (.md, .markdown, .txt) を選択してください');
+        }, false);
+
+        // バックアップ: Go側の runtime.EventsEmit を受け取るリスナー
+        window.runtime.EventsOn("file-loaded", (data) => {
+            dropOverlay.classList.remove('active');
+            renderMarkdown(data.path, data.content);
+        });
+
+        window.runtime.EventsOn("file-error", (message) => {
+            dropOverlay.classList.remove('active');
+            showError(message);
+        });
+
+        // ドラッグオーバー表示用
+        let dragCounter = 0;
+        document.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            dragCounter++;
+            dropOverlay.classList.add('active');
+        });
+        document.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                dropOverlay.classList.remove('active');
+            }
+        });
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragCounter = 0;
+            dropOverlay.classList.remove('active');
+        });
+
+        // ★ 起動時: コマンドライン引数で渡されたファイルを読み込む（ダブルクリック起動対応）
+        (async function() {
+            try {
+                const result = await window.go.main.App.GetInitialFile();
+                if (result && result.path && result.content) {
+                    renderMarkdown(result.path, result.content);
+                }
+            } catch (err) {
+                console.error('初期ファイル読み込みエラー:', err);
+            }
+        })();
+    </script>
+</body>
+</html>

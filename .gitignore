@@ -1,0 +1,22 @@
+# Build output
+build/bin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Wails auto-generated bindings
+frontend/wailsjs/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
