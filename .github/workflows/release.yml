@@ -17,15 +17,12 @@ jobs:
           - os: windows-latest
             platform: windows/amd64
             artifact: markdown-viewer-windows-amd64.exe
-            build_output: build/bin/markdown-viewer.exe
           - os: ubuntu-22.04
             platform: linux/amd64
             artifact: markdown-viewer-linux-amd64
-            build_output: build/bin/markdown-viewer
           - os: macos-latest
             platform: darwin/universal
-            artifact: markdown-viewer-darwin-universal
-            build_output: build/bin/markdown-viewer
+            artifact: markdown-viewer-darwin-universal.zip
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -53,14 +50,19 @@ jobs:
       - name: Build
         run: wails build -platform ${{ matrix.platform }}
 
-      - name: Rename artifact (Unix)
-        if: runner.os != 'Windows'
-        run: cp "${{ matrix.build_output }}" "${{ matrix.artifact }}"
-
-      - name: Rename artifact (Windows)
+      - name: Package artifact (Windows)
         if: runner.os == 'Windows'
-        run: copy "${{ matrix.build_output }}" "${{ matrix.artifact }}"
-        shell: cmd
+        shell: bash
+        run: cp build/bin/markdown-viewer.exe "${{ matrix.artifact }}"
+
+      - name: Package artifact (Linux)
+        if: runner.os == 'Linux'
+        run: cp build/bin/markdown-viewer "${{ matrix.artifact }}"
+
+      - name: Package artifact (macOS)
+        if: runner.os == 'macOS'
+        working-directory: build/bin
+        run: zip -r "../../${{ matrix.artifact }}" markdown-viewer.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
