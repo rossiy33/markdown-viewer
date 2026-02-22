@@ -11,13 +11,14 @@ permissions:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             platform: windows/amd64
             artifact: markdown-viewer-windows-amd64.exe
             build_output: build/bin/markdown-viewer.exe
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             platform: linux/amd64
             artifact: markdown-viewer-linux-amd64
             build_output: build/bin/markdown-viewer
@@ -33,7 +34,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "stable"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
