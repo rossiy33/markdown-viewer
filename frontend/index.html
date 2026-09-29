@@ -7,8 +7,8 @@
     <!-- marked.js: Markdown→HTMLパーサー -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- highlight.js: シンタックスハイライト（ライト/ダーク両対応） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="print, (prefers-color-scheme: light), (prefers-color-scheme: no-preference)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="screen and (prefers-color-scheme: dark)">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         /* テーマ変数: ライトモード（デフォルト） */
@@ -129,6 +129,13 @@
 
         .toolbar button:active {
             background: var(--color-btn-active);
+        }
+
+        .toolbar button:disabled {
+            opacity: 0.5;
+            cursor: default;
+            background: var(--color-btn-bg);
+            border-color: var(--color-border);
         }
 
         .toolbar .file-name {
@@ -331,6 +338,51 @@
             animation: fadeInOut 3s ease forwards;
         }
 
+        /* 印刷用スタイル: ツールバー等を隠し、ライト配色で全文を出力する */
+        @media print {
+            :root {
+                --color-bg: #ffffff;
+                --color-text: #24292f;
+                --color-border: #d0d7de;
+                --color-link: #0969da;
+                --color-code-bg: #f6f8fa;
+                --color-blockquote-text: #57606a;
+                --color-table-header-bg: #f6f8fa;
+            }
+
+            body {
+                overflow: visible;
+                height: auto;
+                display: block;
+            }
+
+            .toolbar, .welcome, .drop-overlay, .error-toast {
+                display: none !important;
+            }
+
+            .content {
+                overflow: visible;
+                padding: 0;
+            }
+
+            .markdown-body {
+                max-width: none;
+            }
+
+            .markdown-body pre {
+                white-space: pre-wrap;
+                word-wrap: break-word;
+            }
+
+            .markdown-body pre, .markdown-body blockquote, .markdown-body table, .markdown-body img {
+                page-break-inside: avoid;
+            }
+
+            .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 {
+                page-break-after: avoid;
+            }
+        }
+
         @keyframes fadeInOut {
             0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
             10% { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -348,6 +400,12 @@
             ファイルを開く
         </button>
         <span class="file-name" id="fileName"></span>
+        <button id="printBtn" style="--wails-draggable: no-drag" disabled>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5zm7 2v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1z"/>
+            </svg>
+            印刷
+        </button>
     </div>
 
     <div class="content" id="contentArea">
@@ -382,6 +440,7 @@
         });
 
         const openBtn = document.getElementById('openBtn');
+        const printBtn = document.getElementById('printBtn');
         const fileName = document.getElementById('fileName');
         const welcome = document.getElementById('welcome');
         const markdownBody = document.getElementById('markdownBody');
@@ -397,6 +456,13 @@
             markdownBody.style.display = 'block';
             markdownBody.innerHTML = marked.parse(content);
             contentArea.scrollTop = 0;
+            printBtn.disabled = false;
+        }
+
+        // 表示中のMarkdownを印刷する
+        function printMarkdown() {
+            if (markdownBody.style.display !== 'block') return;
+            window.print();
         }
 
         // エラーメッセージを表示する
@@ -417,6 +483,17 @@
                 }
             } catch (err) {
                 showError('ファイルを開けませんでした: ' + err);
+            }
+        });
+
+        // 印刷ボタン
+        printBtn.addEventListener('click', printMarkdown);
+
+        // Ctrl+P / Cmd+P で印刷
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                printMarkdown();
             }
         });
 
