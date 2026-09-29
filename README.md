@@ -4,7 +4,7 @@ Go + Wails v2 で作成したシンプルなMarkdownビューアです。
 
 ![Windows](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![Go](https://img.shields.io/badge/Go-1.25-00ADD8)
-![Wails](https://img.shields.io/badge/Wails-v2.11-red)
+![Wails](https://img.shields.io/badge/Wails-v2.12-red)
 
 ## 特徴
 
